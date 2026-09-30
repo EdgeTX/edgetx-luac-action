@@ -1,0 +1,141 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-x64
+            cmake: -DCMAKE_EXE_LINKER_FLAGS=-static
+          - os: ubuntu-22.04-arm
+            target: linux-arm64
+            cmake: -DCMAKE_EXE_LINKER_FLAGS=-static
+          - os: macos-latest
+            target: macos-universal
+            cmake: -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          - os: windows-latest
+            target: windows-x64
+            # static CRT, so no Visual C++ redistributable is needed
+            cmake: -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Read the pinned EdgeTX ref
+        id: ref
+        run: |
+          sha=$(sed -n "/^  edgetx-ref:/,/default:/ s/.*default: '\([0-9a-f]\{40\}\)'.*/\1/p" action.yml)
+          if [ -z "$sha" ]; then
+            echo "::error::edgetx-ref default in action.yml must be a full commit SHA for a release"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out EdgeTX Lua sources
+        uses: actions/checkout@v7
+        with:
+          repository: EdgeTX/edgetx
+          ref: ${{ steps.ref.outputs.sha }}
+          path: .edgetx-luac-src
+          sparse-checkout: radio/src/thirdparty/Lua
+          persist-credentials: false
+
+      - name: Build
+        env:
+          CMAKE_ARGS: ${{ matrix.cmake }}
+        run: |
+          # word-split CMAKE_ARGS into separate arguments
+          # shellcheck disable=SC2086
+          bash scripts/build.sh .edgetx-luac-src pkg $CMAKE_ARGS
+
+      - name: Smoke test
+        run: |
+          luac=pkg/edgetx-luac
+          [ -f "$luac.exe" ] && luac="$luac.exe"
+          "$luac" -s -o main.luac test/fixtures/ok/main.lua
+          bash scripts/check-header.sh main.luac
+          "$luac" -l -p main.luac > /dev/null
+          case "$RUNNER_OS" in
+            Linux) file "$luac" | grep -q 'statically linked' ;;
+            macOS) lipo "$luac" -verify_arch arm64 x86_64 ;;
+          esac
+
+      - name: Package
+        env:
+          NAME: edgetx-luac-${{ github.ref_name }}-${{ matrix.target }}
+          SHA: ${{ steps.ref.outputs.sha }}
+        run: |
+          # the binary is built from Lua, whose licence must travel with it
+          sed -n '/^\* Copyright (C)/,/^\*\*\*/p' .edgetx-luac-src/radio/src/thirdparty/Lua/src/lua.h \
+            | sed '$d; s/^\* \{0,1\}//' > pkg/LICENSE-Lua.txt
+          cat > pkg/README.txt <<EOF
+          edgetx-luac ${GITHUB_REF_NAME}
+
+          Compiles Lua scripts to bytecode for EdgeTX 2.11 and later radios.
+          Built from https://github.com/EdgeTX/edgetx/tree/${SHA}/radio/src/thirdparty/Lua
+
+          Usage: edgetx-luac -s -o script.luac script.lua
+
+          https://github.com/${GITHUB_REPOSITORY}
+          EOF
+          mkdir -p out
+          if [ "$RUNNER_OS" = Windows ]; then
+            (cd pkg && 7z a -tzip "../out/$NAME.zip" .)
+          else
+            tar -czf "out/$NAME.tar.gz" -C pkg .
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: out/*
+
+  release:
+    name: Draft release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Write checksums and notes
+        run: |
+          (cd out && sha256sum * > SHA256SUMS)
+          sha=$(sed -n "/^  edgetx-ref:/,/default:/ s/.*default: '\([0-9a-f]\{40\}\)'.*/\1/p" action.yml)
+          cat > notes.md <<EOF
+          Compiles Lua scripts to bytecode for **EdgeTX 2.11 and later**.
+
+          Compiler built from EdgeTX/edgetx@${sha}.
+          EOF
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body_path: notes.md
+          generate_release_notes: true
+          files: out/*

@@ -1,0 +1,98 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Compile fixtures
+        id: ok
+        uses: ./
+        with:
+          files: test/fixtures/ok/**/*.lua
+
+      - name: Check compiled fixtures
+        env:
+          FILES: ${{ steps.ok.outputs.files }}
+          LUAC: ${{ steps.ok.outputs.luac }}
+        run: |
+          mapfile -t files <<< "$FILES"
+          if [ ${#files[@]} -ne 3 ]; then
+            echo "::error::Expected 3 compiled files, got ${#files[@]}: $FILES"
+            exit 1
+          fi
+          bash scripts/check-header.sh "${files[@]}"
+          # load each one back through lundump
+          for f in "${files[@]}"; do
+            "$LUAC" -l -p "$f" > /dev/null
+          done
+          [ ! -e test/fixtures/ok/notes.luac ]
+
+      - name: Compile into an output directory
+        id: dist
+        uses: ./
+        with:
+          files: test/fixtures/ok/main.lua
+          output-dir: dist
+
+      - name: Check output directory
+        env:
+          FILES: ${{ steps.dist.outputs.files }}
+        run: |
+          [ "$FILES" = dist/test/fixtures/ok/main.luac ]
+          bash scripts/check-header.sh dist/test/fixtures/ok/main.luac
+
+      - name: Check a syntax error fails the action
+        id: bad
+        continue-on-error: true
+        uses: ./
+        with:
+          files: test/fixtures/bad/*.lua
+          check-only: true
+
+      - name: Check the syntax error was reported
+        env:
+          OUTCOME: ${{ steps.bad.outcome }}
+          LUAC: ${{ steps.ok.outputs.luac }}
+        run: |
+          if [ "$OUTCOME" != failure ]; then
+            echo "::error::Expected the action to fail on a syntax error, got '$OUTCOME'"
+            exit 1
+          fi
+          # capture rather than print, so the expected error isn't annotated again
+          out=$(LUAC="$LUAC" FILES='test/fixtures/bad/*.lua' CHECK_ONLY=true bash scripts/compile.sh 2>&1) && exit 1
+          grep -qF '::error file=test/fixtures/bad/broken.lua,line=3::' <<< "$out" || {
+            echo "::error::Missing annotation for bad/broken.lua"
+            exit 1
+          }
+          [ ! -e test/fixtures/bad/broken.luac ]
+
+      - name: Check an unknown EdgeTX ref fails the action
+        id: badref
+        continue-on-error: true
+        uses: ./
+        with:
+          files: test/fixtures/ok/main.lua
+          check-only: true
+          edgetx-ref: no-such-ref
+
+      - name: Check the unknown ref was rejected
+        env:
+          OUTCOME: ${{ steps.badref.outcome }}
+        run: '[ "$OUTCOME" = failure ]'

@@ -1,0 +1,95 @@
+name: EdgeTX Lua compiler
+description: Precompile Lua scripts to EdgeTX bytecode (.luac) so radios can load them without compiling on the radio
+author: EdgeTX
+
+branding:
+  icon: cpu
+  color: blue
+
+inputs:
+  files:
+    description: Newline-separated glob patterns of scripts to compile, relative to the workspace (** matches any depth)
+    default: '**/*.lua'
+  strip:
+    description: Strip debug information (smaller files, but errors lose line numbers), as the radio does when it compiles
+    default: 'true'
+  check-only:
+    description: Only check syntax and write no .luac files
+    default: 'false'
+  output-dir:
+    description: Directory to write .luac files to, keeping each script's relative path (default is next to each script)
+    default: ''
+  edgetx-ref:
+    description: Branch, tag or full commit SHA of the EdgeTX source to build the compiler from
+    default: '44d520719ed9bd24884682eb0b8ac9859843950e'
+  edgetx-repo:
+    description: Repository to build the compiler from
+    default: 'EdgeTX/edgetx'
+
+outputs:
+  files:
+    description: Newline-separated list of the .luac files written
+    value: ${{ steps.compile.outputs.files }}
+  luac:
+    description: Path to the edgetx-luac binary, for running it directly in later steps
+    value: ${{ steps.ref.outputs.bin }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve EdgeTX ref
+      id: ref
+      shell: bash
+      env:
+        REPO: ${{ inputs.edgetx-repo }}
+        REF: ${{ inputs.edgetx-ref }}
+      run: |
+        sha=$(bash "$GITHUB_ACTION_PATH/scripts/resolve-ref.sh" "$REPO" "$REF")
+        dir="$RUNNER_TEMP/edgetx-luac/$sha"
+        bin="$dir/edgetx-luac"
+        [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        echo "dir=$dir" >> "$GITHUB_OUTPUT"
+        echo "bin=$bin" >> "$GITHUB_OUTPUT"
+        # already built by an earlier call in this job
+        [ -f "$bin" ] && echo "built=true" >> "$GITHUB_OUTPUT"
+        true
+
+    - name: Restore edgetx-luac
+      id: cache
+      if: steps.ref.outputs.built != 'true'
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.ref.outputs.dir }}
+        key: edgetx-luac-${{ runner.os }}-${{ runner.arch }}-${{ steps.ref.outputs.sha }}
+
+    - name: Check out EdgeTX Lua sources
+      if: steps.ref.outputs.built != 'true' && steps.cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@v7
+      with:
+        repository: ${{ inputs.edgetx-repo }}
+        ref: ${{ steps.ref.outputs.sha }}
+        path: .edgetx-luac-src
+        sparse-checkout: radio/src/thirdparty/Lua
+        persist-credentials: false
+
+    - name: Build edgetx-luac
+      if: steps.ref.outputs.built != 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        OUT: ${{ steps.ref.outputs.dir }}
+      run: |
+        bash "$GITHUB_ACTION_PATH/scripts/build.sh" .edgetx-luac-src "$OUT"
+        rm -rf .edgetx-luac-src
+
+    - name: Compile scripts
+      id: compile
+      shell: bash
+      env:
+        LUAC: ${{ steps.ref.outputs.bin }}
+        FILES: ${{ inputs.files }}
+        STRIP: ${{ inputs.strip }}
+        CHECK_ONLY: ${{ inputs.check-only }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+        EXCLUDE: .edgetx-luac-src
+      run: bash "$GITHUB_ACTION_PATH/scripts/compile.sh"
