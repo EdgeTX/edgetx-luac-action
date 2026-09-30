@@ -21,7 +21,7 @@ inputs:
     default: ''
   edgetx-ref:
     description: Branch, tag or full commit SHA of the EdgeTX source to build the compiler from
-    default: '44d520719ed9bd24884682eb0b8ac9859843950e'
+    default: '1468055c9b6bbd9861e1042c605d7a9f5207a0b2'
   edgetx-repo:
     description: Repository to build the compiler from
     default: 'EdgeTX/edgetx'
