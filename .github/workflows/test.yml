@@ -62,7 +62,7 @@ jobs:
             echo "::error::Expected 3 compiled files, got ${#files[@]}: $FILES"
             exit 1
           fi
-          bash scripts/check-header.sh "${files[@]}"
+          python scripts/check_header.py "${files[@]}"
           # load each one back through lundump
           for f in "${files[@]}"; do
             "$LUAC" -l -p "$f" > /dev/null
@@ -94,7 +94,7 @@ jobs:
           FILES: ${{ steps.dist.outputs.files }}
         run: |
           [ "$FILES" = dist/test/fixtures/ok/main.luac ]
-          bash scripts/check-header.sh dist/test/fixtures/ok/main.luac
+          python scripts/check_header.py dist/test/fixtures/ok/main.luac
 
       - name: Check a syntax error fails the action
         id: bad

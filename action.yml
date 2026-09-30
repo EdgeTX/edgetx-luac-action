@@ -43,17 +43,7 @@ runs:
       env:
         REPO: ${{ inputs.edgetx-repo }}
         REF: ${{ inputs.edgetx-ref }}
-      run: |
-        sha=$(bash "$GITHUB_ACTION_PATH/scripts/resolve-ref.sh" "$REPO" "$REF")
-        dir="$RUNNER_TEMP/edgetx-luac/$sha"
-        bin="$dir/edgetx-luac"
-        [ "$RUNNER_OS" = Windows ] && bin="$bin.exe"
-        echo "sha=$sha" >> "$GITHUB_OUTPUT"
-        echo "dir=$dir" >> "$GITHUB_OUTPUT"
-        echo "bin=$bin" >> "$GITHUB_OUTPUT"
-        # already built by an earlier call in this job
-        [ -f "$bin" ] && echo "built=true" >> "$GITHUB_OUTPUT"
-        true
+      run: python "$GITHUB_ACTION_PATH/scripts/resolve_ref.py" "$REPO" "$REF"
 
     - name: Restore edgetx-luac
       id: cache
@@ -79,7 +69,7 @@ runs:
       env:
         OUT: ${{ steps.ref.outputs.dir }}
       run: |
-        bash "$GITHUB_ACTION_PATH/scripts/build.sh" .edgetx-luac-src "$OUT"
+        python "$GITHUB_ACTION_PATH/scripts/build.py" .edgetx-luac-src "$OUT"
         rm -rf .edgetx-luac-src
 
     - name: Compile scripts

@@ -60,14 +60,14 @@ jobs:
         run: |
           # word-split CMAKE_ARGS into separate arguments
           # shellcheck disable=SC2086
-          bash scripts/build.sh .edgetx-luac-src pkg $CMAKE_ARGS
+          python scripts/build.py .edgetx-luac-src pkg $CMAKE_ARGS
 
       - name: Smoke test
         run: |
           luac=pkg/edgetx-luac
           [ -f "$luac.exe" ] && luac="$luac.exe"
           "$luac" -s -o main.luac test/fixtures/ok/main.lua
-          bash scripts/check-header.sh main.luac
+          python scripts/check_header.py main.luac
           "$luac" -l -p main.luac > /dev/null
           case "$RUNNER_OS" in
             Linux) file "$luac" | grep -q 'statically linked' ;;

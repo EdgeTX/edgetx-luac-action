@@ -106,9 +106,17 @@ include both licences.
 
 ### Development
 
-`scripts/compile.py` does the matching and compiling. It uses only the Python standard
-library, so the action runs it with the runner's own `python`. Lint and format it with
-[uv](https://docs.astral.sh/uv/) and ruff, as CI does:
+The action's steps are Python scripts in `scripts/`:
+
+| Script | Does |
+| ------ | ---- |
+| `resolve_ref.py` | Turns `edgetx-ref` into a commit SHA and works out where the binary is cached |
+| `build.py` | Builds `edgetx-luac` with CMake |
+| `compile.py` | Matches the globs and compiles or checks each script |
+| `check_header.py` | Checks `.luac` headers (used by the tests and the release workflow) |
+
+They use only the Python standard library, so the action runs them with the runner's own
+`python`. Lint and format them with [uv](https://docs.astral.sh/uv/) and ruff, as CI does:
 
 ```sh
 uv run ruff check
