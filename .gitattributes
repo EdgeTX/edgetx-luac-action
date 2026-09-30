@@ -1,0 +1,6 @@
+# LF everywhere, including Windows checkouts, so scripts and test
+# fixtures are byte-identical on every runner
+* text=auto eol=lf
+
+*.luac binary
+*.png binary
