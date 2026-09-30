@@ -87,7 +87,7 @@ def main():
             print(f"ok  {script}")
 
     if "GITHUB_OUTPUT" in os.environ:
-        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+        with open(os.environ["GITHUB_OUTPUT"], "a", newline="\n") as f:
             f.write("files<<EDGETX_LUAC_EOF\n")
             f.writelines(f"{out}\n" for out in outputs)
             f.write("EDGETX_LUAC_EOF\n")
@@ -98,7 +98,7 @@ def main():
         summary += f", {failed} failed"
     print(summary)
     if "GITHUB_STEP_SUMMARY" in os.environ:
-        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", newline="\n") as f:
             f.write(summary + "\n")
 
     return 1 if failed else 0
