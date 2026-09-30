@@ -40,7 +40,9 @@ jobs:
           FILES: ${{ steps.ok.outputs.files }}
           LUAC: ${{ steps.ok.outputs.luac }}
         run: |
-          mapfile -t files <<< "$FILES"
+          # no mapfile: macOS runners have bash 3.2
+          files=()
+          while IFS= read -r f; do files+=("$f"); done <<< "$FILES"
           if [ ${#files[@]} -ne 3 ]; then
             echo "::error::Expected 3 compiled files, got ${#files[@]}: $FILES"
             exit 1
@@ -51,6 +53,17 @@ jobs:
             "$LUAC" -l -p "$f" > /dev/null
           done
           [ ! -e test/fixtures/ok/notes.luac ]
+
+      - name: Check glob matching
+        env:
+          LUAC: ${{ steps.ok.outputs.luac }}
+        run: |
+          # a single '*' stays within its directory
+          out=$(LUAC="$LUAC" FILES='test/fixtures/ok/*.lua' CHECK_ONLY=true bash scripts/compile.sh)
+          grep -qF 'checked 1 of 1 scripts' <<< "$out"
+          # '**' reaches every depth, including directories with spaces
+          out=$(LUAC="$LUAC" FILES='test/**/ok/**/*.lua' CHECK_ONLY=true bash scripts/compile.sh)
+          grep -qF 'checked 3 of 3 scripts' <<< "$out"
 
       - name: Compile into an output directory
         id: dist

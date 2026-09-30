@@ -9,12 +9,8 @@
 #   OUTPUT_DIR  directory for .luac files (default: next to each source)
 #   EXCLUDE     directory to leave out of the matches
 set -uo pipefail
-
-if ((BASH_VERSINFO[0] < 4)); then
-  echo "::error::bash 4 or later is required (found $BASH_VERSION)"
-  exit 1
-fi
-shopt -s globstar nullglob
+# Written for bash 3.2, which is what macOS runners provide: no globstar,
+# associative arrays or mapfile.
 
 : "${LUAC:?}" "${FILES:?}"
 STRIP=${STRIP:-true}
@@ -30,28 +26,88 @@ escape() {
   printf '%s' "$s"
 }
 
-declare -A seen=()
+# Convert a glob to an anchored extended regex, following bash's globstar
+# rules: '*' and '?' stay within a path component, '**/' matches any
+# number of directories and a trailing '**' matches everything below.
+glob_to_regex() {
+  local glob=$1 re='' c i=0 n=${#1}
+  while ((i < n)); do
+    c=${glob:i:1}
+    case "$c" in
+      '*')
+        if [ "${glob:i:3}" = '**/' ]; then
+          re+='(.*/)?'
+          i=$((i + 2))
+        elif [ "${glob:i:2}" = '**' ]; then
+          re+='.*'
+          i=$((i + 1))
+        else
+          re+='[^/]*'
+        fi
+        ;;
+      '?') re+='[^/]' ;;
+      '[')
+        # copy a bracket expression through, turning '[!' into '[^'
+        local j=$((i + 1)) class='['
+        [ "${glob:j:1}" = '!' ] && class+='^' && j=$((j + 1))
+        [ "${glob:j:1}" = ']' ] && class+=']' && j=$((j + 1))
+        while ((j < n)) && [ "${glob:j:1}" != ']' ]; do
+          class+=${glob:j:1}
+          j=$((j + 1))
+        done
+        if ((j < n)); then
+          re+="$class]"
+          i=$j
+        else
+          re+='\['
+        fi
+        ;;
+      '.' | '+' | '(' | ')' | '{' | '}' | '|' | '^' | '$' | "\\")
+        re+="\\$c"
+        ;;
+      *) re+=$c ;;
+    esac
+    i=$((i + 1))
+  done
+  printf '^%s$' "$re"
+}
+
+# print the files matching a glob, one per line, sorted
+expand_glob() {
+  local glob=${1#./} root re hidden=false dot='(^|/)\.'
+  re=$(glob_to_regex "$glob")
+
+  # start from the directory part before the first wildcard
+  root=${glob%%[*?[]*}
+  case "$root" in
+    */*) root=${root%/*} ;;
+    *) root=. ;;
+  esac
+
+  # like bash globs, skip hidden files and directories unless asked for
+  [[ $glob =~ $dot ]] && hidden=true
+
+  find "$root" -type f 2>/dev/null | sed 's|^\./||' | LC_ALL=C sort |
+    while IFS= read -r f; do
+      [ $hidden = false ] && [[ $f =~ $dot ]] && continue
+      [[ $f =~ $re ]] && printf '%s\n' "$f"
+    done
+}
+
+seen=$'\n'
 scripts=()
 while IFS= read -r pattern; do
   pattern=${pattern#"${pattern%%[![:space:]]*}"}
   pattern=${pattern%"${pattern##*[![:space:]]}"}
   [ -z "$pattern" ] && continue
 
-  # split on newlines only, so patterns may contain spaces
-  IFS=$'\n'
-  # shellcheck disable=SC2206
-  matches=($pattern)
-  unset IFS
-
-  for f in "${matches[@]}"; do
-    f=${f#./}
-    [ -f "$f" ] || continue
+  while IFS= read -r f; do
     [[ $f == *.lua ]] || continue
     [ -n "$EXCLUDE" ] && [[ $f == "$EXCLUDE"/* ]] && continue
-    [ -n "${seen[$f]:-}" ] && continue
-    seen[$f]=1
+    case "$seen" in *$'\n'"$f"$'\n'*) continue ;; esac
+    seen+="$f"$'\n'
     scripts+=("$f")
-  done
+  done < <(expand_glob "$pattern")
 done <<< "$FILES"
 
 if [ ${#scripts[@]} -eq 0 ]; then
