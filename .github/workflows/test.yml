@@ -28,6 +28,9 @@ jobs:
           uv run ruff check
           uv run ruff format --check
 
+      - name: Check files against .editorconfig
+        run: uv run ec
+
   test:
     name: Test (${{ matrix.os }})
     strategy:

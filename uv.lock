@@ -9,13 +9,23 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "editorconfig-checker" },
     { name = "ruff" },
 ]
 
 [package.metadata]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff" }]
+dev = [
+    { name = "editorconfig-checker" },
+    { name = "ruff" },
+]
+
+[[package]]
+name = "editorconfig-checker"
+version = "3.11.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/2d/d19e303795e994d02864b1ecbeefcecc125ba3a04a3458b4478f597fd0eb/editorconfig_checker-3.11.1.tar.gz", hash = "sha256:043b5ae504bc2e6d4497ac4e3058f143339eb3cffd56abb7a215c44ebfd73a1b", size = 4763, upload-time = "2026-08-10T20:05:33.484Z" }
 
 [[package]]
 name = "ruff"

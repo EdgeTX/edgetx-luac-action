@@ -1,12 +1,12 @@
 """Compile (or syntax-check) Lua scripts with edgetx-luac.
 
 Environment:
-  LUAC        path to the edgetx-luac binary
-  FILES       newline-separated glob patterns
-  STRIP       "true" to strip debug information
-  CHECK_ONLY  "true" to only check syntax, writing nothing
-  OUTPUT_DIR  directory for .luac files (default: next to each source)
-  EXCLUDE     directory to leave out of the matches
+    LUAC        path to the edgetx-luac binary
+    FILES       newline-separated glob patterns
+    STRIP       "true" to strip debug information
+    CHECK_ONLY  "true" to only check syntax, writing nothing
+    OUTPUT_DIR  directory for .luac files (default: next to each source)
+    EXCLUDE     directory to leave out of the matches
 """
 
 import glob

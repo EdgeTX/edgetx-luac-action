@@ -116,11 +116,13 @@ The action's steps are Python scripts in `scripts/`:
 | `check_header.py` | Checks `.luac` headers (used by the tests and the release workflow) |
 
 They use only the Python standard library, so the action runs them with the runner's own
-`python`. Lint and format them with [uv](https://docs.astral.sh/uv/) and ruff, as CI does:
+`python`. CI lints with [uv](https://docs.astral.sh/uv/): ruff for the Python, and
+editorconfig-checker to check every file follows `.editorconfig`. To run the same locally:
 
 ```sh
 uv run ruff check
 uv run ruff format --check
+uv run ec
 ```
 
 ### Updating the compiler

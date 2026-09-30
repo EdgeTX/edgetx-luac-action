@@ -3,10 +3,10 @@
 Usage: resolve_ref.py <owner/repo> <ref>
 
 Prints the full commit SHA. In a workflow it also sets these step outputs:
-  sha    full commit SHA
-  dir    directory to keep the built binary in
-  bin    path to the binary
-  built  "true" if an earlier step in this job already built it
+    sha    full commit SHA
+    dir    directory to keep the built binary in
+    bin    path to the binary
+    built  "true" if an earlier step in this job already built it
 """
 
 import os
