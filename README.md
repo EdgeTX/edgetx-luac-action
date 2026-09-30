@@ -96,6 +96,12 @@ or right-click it and choose **Open** once.
 
 You can also compile in the browser at <https://edgetx-luac.pages.dev>.
 
+## Licence
+
+This action is licensed under the GNU General Public License v2, the same as EdgeTX.
+The compiler is built from EdgeTX's copy of Lua, which is MIT licensed. The release archives
+include both licences.
+
 ## Maintainers
 
 ### Updating the compiler

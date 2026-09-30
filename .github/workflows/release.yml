@@ -82,6 +82,7 @@ jobs:
           # the binary is built from Lua, whose licence must travel with it
           sed -n '/^\* Copyright (C)/,/^\*\*\*/p' .edgetx-luac-src/radio/src/thirdparty/Lua/src/lua.h \
             | sed '$d; s/^\* \{0,1\}//' > pkg/LICENSE-Lua.txt
+          cp LICENSE pkg/LICENSE.txt
           cat > pkg/README.txt <<EOF
           edgetx-luac ${GITHUB_REF_NAME}
 
