@@ -104,6 +104,17 @@ include both licences.
 
 ## Maintainers
 
+### Development
+
+`scripts/compile.py` does the matching and compiling. It uses only the Python standard
+library, so the action runs it with the runner's own `python`. Lint and format it with
+[uv](https://docs.astral.sh/uv/) and ruff, as CI does:
+
+```sh
+uv run ruff check
+uv run ruff format --check
+```
+
 ### Updating the compiler
 
 Set `inputs.edgetx-ref.default` in `action.yml` to the new EdgeTX commit SHA, and open a PR.

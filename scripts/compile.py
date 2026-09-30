@@ -1,0 +1,108 @@
+"""Compile (or syntax-check) Lua scripts with edgetx-luac.
+
+Environment:
+  LUAC        path to the edgetx-luac binary
+  FILES       newline-separated glob patterns
+  STRIP       "true" to strip debug information
+  CHECK_ONLY  "true" to only check syntax, writing nothing
+  OUTPUT_DIR  directory for .luac files (default: next to each source)
+  EXCLUDE     directory to leave out of the matches
+"""
+
+import glob
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path, PurePath
+
+
+def escape(message):
+    """Escape a workflow command message."""
+    return message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def find_scripts(patterns, exclude):
+    """Expand glob patterns to .lua files, in order and without duplicates."""
+    scripts = []
+    for pattern in patterns.splitlines():
+        pattern = pattern.strip()
+        if not pattern:
+            continue
+        for match in sorted(glob.glob(pattern, recursive=True)):
+            path = PurePath(os.path.normpath(match)).as_posix()
+            if not path.endswith(".lua") or not os.path.isfile(path):
+                continue
+            if exclude and path.startswith(exclude.rstrip("/") + "/"):
+                continue
+            if path not in scripts:
+                scripts.append(path)
+    return scripts
+
+
+def annotate(script, error):
+    """Report an edgetx-luac error as an annotation on the script."""
+    # "<progname>: <chunk>:<line>: <message>"
+    message = error.strip().split(": ", 1)[-1]
+    m = re.match(r"[^:]*:(\d+): (.*)", message, re.DOTALL)
+    if m:
+        print(f"::error file={script},line={m[1]}::{escape(m[2])}")
+    else:
+        print(f"::error file={script}::{escape(message)}")
+
+
+def main():
+    luac = os.environ["LUAC"]
+    patterns = os.environ["FILES"]
+    strip = os.environ.get("STRIP", "true") == "true"
+    check_only = os.environ.get("CHECK_ONLY", "false") == "true"
+    output_dir = os.environ.get("OUTPUT_DIR", "")
+
+    scripts = find_scripts(patterns, os.environ.get("EXCLUDE", ""))
+    if not scripts:
+        print(f"::error::No .lua files matched: {escape(patterns)}")
+        return 1
+
+    failed = 0
+    outputs = []
+    for script in scripts:
+        if check_only:
+            out = None
+            args = ["-p", script]
+        else:
+            out = script[: -len(".lua")] + ".luac"
+            if output_dir:
+                out = f"{output_dir.rstrip('/')}/{out}"
+                Path(out).parent.mkdir(parents=True, exist_ok=True)
+            args = (["-s"] if strip else []) + ["-o", out, script]
+
+        result = subprocess.run([luac] + args, capture_output=True, text=True)
+        if result.returncode != 0:
+            failed += 1
+            annotate(script, result.stderr or result.stdout)
+        elif out:
+            print(f"ok  {script} -> {out}")
+            outputs.append(out)
+        else:
+            print(f"ok  {script}")
+
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write("files<<EDGETX_LUAC_EOF\n")
+            f.writelines(f"{out}\n" for out in outputs)
+            f.write("EDGETX_LUAC_EOF\n")
+
+    verb = "checked" if check_only else "compiled"
+    summary = f"edgetx-luac: {verb} {len(scripts) - failed} of {len(scripts)} scripts"
+    if failed:
+        summary += f", {failed} failed"
+    print(summary)
+    if "GITHUB_STEP_SUMMARY" in os.environ:
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+            f.write(summary + "\n")
+
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

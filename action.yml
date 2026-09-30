@@ -92,4 +92,4 @@ runs:
         CHECK_ONLY: ${{ inputs.check-only }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
         EXCLUDE: .edgetx-luac-src
-      run: bash "$GITHUB_ACTION_PATH/scripts/compile.sh"
+      run: python "$GITHUB_ACTION_PATH/scripts/compile.py"

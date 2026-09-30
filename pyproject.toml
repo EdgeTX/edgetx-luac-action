@@ -1,0 +1,17 @@
+[project]
+name = "edgetx-luac-action"
+version = "0.0.0"
+description = "GitHub Action that precompiles Lua scripts to EdgeTX bytecode"
+requires-python = ">=3.9"
+
+[dependency-groups]
+dev = ["ruff"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

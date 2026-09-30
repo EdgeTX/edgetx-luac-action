@@ -13,6 +13,21 @@ env:
   EDGETX_REF: 49260df8e4fc8e19026f31bd056d057ec64fc50e
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+
+      - name: Check Python with ruff
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+
   test:
     name: Test (${{ matrix.os }})
     strategy:
@@ -59,10 +74,10 @@ jobs:
           LUAC: ${{ steps.ok.outputs.luac }}
         run: |
           # a single '*' stays within its directory
-          out=$(LUAC="$LUAC" FILES='test/fixtures/ok/*.lua' CHECK_ONLY=true bash scripts/compile.sh)
+          out=$(LUAC="$LUAC" FILES='test/fixtures/ok/*.lua' CHECK_ONLY=true python scripts/compile.py)
           grep -qF 'checked 1 of 1 scripts' <<< "$out"
           # '**' reaches every depth, including directories with spaces
-          out=$(LUAC="$LUAC" FILES='test/**/ok/**/*.lua' CHECK_ONLY=true bash scripts/compile.sh)
+          out=$(LUAC="$LUAC" FILES='test/**/ok/**/*.lua' CHECK_ONLY=true python scripts/compile.py)
           grep -qF 'checked 3 of 3 scripts' <<< "$out"
 
       - name: Compile into an output directory
@@ -101,7 +116,7 @@ jobs:
             exit 1
           fi
           # capture rather than print, so the expected error isn't annotated again
-          out=$(LUAC="$LUAC" FILES='test/fixtures/bad/*.lua' CHECK_ONLY=true bash scripts/compile.sh 2>&1) && exit 1
+          out=$(LUAC="$LUAC" FILES='test/fixtures/bad/*.lua' CHECK_ONLY=true python scripts/compile.py 2>&1) && exit 1
           grep -qF '::error file=test/fixtures/bad/broken.lua,line=3::' <<< "$out" || {
             echo "::error::Missing annotation for bad/broken.lua"
             exit 1
