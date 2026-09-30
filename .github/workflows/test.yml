@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# TODO: drop once the MSVC build fixes (pfeerick/edgetx#25) are merged into
+# EdgeTX/edgetx and the action's pinned edgetx-ref includes them
+env:
+  EDGETX_REPO: pfeerick/edgetx
+  EDGETX_REF: 49260df8e4fc8e19026f31bd056d057ec64fc50e
+
 jobs:
   test:
     name: Test (${{ matrix.os }})
@@ -26,6 +32,8 @@ jobs:
         uses: ./
         with:
           files: test/fixtures/ok/**/*.lua
+          edgetx-repo: ${{ env.EDGETX_REPO }}
+          edgetx-ref: ${{ env.EDGETX_REF }}
 
       - name: Check compiled fixtures
         env:
@@ -50,6 +58,8 @@ jobs:
         with:
           files: test/fixtures/ok/main.lua
           output-dir: dist
+          edgetx-repo: ${{ env.EDGETX_REPO }}
+          edgetx-ref: ${{ env.EDGETX_REF }}
 
       - name: Check output directory
         env:
@@ -65,6 +75,8 @@ jobs:
         with:
           files: test/fixtures/bad/*.lua
           check-only: true
+          edgetx-repo: ${{ env.EDGETX_REPO }}
+          edgetx-ref: ${{ env.EDGETX_REF }}
 
       - name: Check the syntax error was reported
         env:
