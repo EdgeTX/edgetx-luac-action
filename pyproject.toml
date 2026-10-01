@@ -11,6 +11,7 @@ dev = [
     "editorconfig-checker",
     "pre-commit",
     "ruff",
+    "shellcheck-py",
 ]
 
 [tool.uv]
