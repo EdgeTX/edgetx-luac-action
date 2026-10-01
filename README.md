@@ -115,41 +115,6 @@ This action is licensed under the GNU General Public License v2, the same as Edg
 The compiler is built from EdgeTX's copy of Lua, which is MIT licensed. The release archives
 include both licences.
 
-## Maintainers
+## Contributing
 
-### Development
-
-The action's steps are Python scripts in `scripts/`:
-
-| Script | Does |
-| ------ | ---- |
-| `resolve_ref.py` | Turns `edgetx-ref` into a commit SHA and works out where the binary is cached |
-| `build.py` | Builds `edgetx-luac` with CMake |
-| `compile.py` | Matches the globs and compiles or checks each script |
-| `check_header.py` | Checks `.luac` headers (used by the tests and the release workflow) |
-
-They use only the Python standard library, so the action runs them with the runner's own
-`python`. CI lints with [uv](https://docs.astral.sh/uv/): ruff for the Python, and
-editorconfig-checker to check every file follows `.editorconfig`. To run the same locally:
-
-```sh
-uv run ruff check
-uv run ruff format --check
-uv run ec
-```
-
-### Updating the compiler
-
-Set `inputs.edgetx-ref.default` in `action.yml` to the new EdgeTX commit SHA, and open a PR.
-The test workflow builds that commit on every platform.
-
-### Releasing
-
-1. Tag the release: `git tag v1.2.3 && git push origin v1.2.3`.
-   Tags with a suffix (`v1.2.3-rc1`) become pre-releases.
-2. The release workflow builds the binaries and creates a **draft** release.
-   Check it, then publish it.
-3. Move the major tag: `git tag -f v1 v1.2.3 && git push -f origin v1`.
-
-Bump the major version only when EdgeTX changes its bytecode format, and add a row to the
-compatibility table.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, updating the compiler and releasing.
