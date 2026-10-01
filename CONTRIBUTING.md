@@ -73,7 +73,8 @@ most of the bugs found so far only showed up on one platform.
 
 - Use [Conventional Commits](https://www.conventionalcommits.org): `type(scope): description`.
 - Open PRs against `main`. They're squash-merged, so fix review comments with follow-up commits rather
-  than rewriting what you've pushed.
+  than rewriting what you've pushed. `main` is protected, so nothing can be pushed to it directly, and a PR
+  can only merge once Lint and all four test jobs pass.
 - If you change an input or output, update the tables in `README.md` to match.
 
 ## Updating the compiler
