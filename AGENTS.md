@@ -23,8 +23,10 @@ the rules that keep it working on every runner.
   runner provides, so nothing can be installed at runtime.
 - **Compiler build:** CMake plus the runner's C compiler (GCC, Apple clang, MSVC).
 - **Dev tooling:** [uv](https://docs.astral.sh/uv/) manages the dev dependency group in `pyproject.toml`
-  (`ruff`, `editorconfig-checker`, `actionlint-py`, `commitizen`, `pre-commit`), locked in `uv.lock`.
-  These are for development and CI only and are never used by the action itself.
+  (`ruff`, `editorconfig-checker`, `actionlint-py`, `shellcheck-py`, `commitizen`, `pre-commit`),
+  locked in `uv.lock`. These are for development and CI only and are never used by the action itself.
+  `shellcheck-py` is there because actionlint uses whatever shellcheck is on PATH to check `run:`
+  scripts. The locked copy makes local runs match CI, whose runner has its own shellcheck.
 - **Checks:** `.pre-commit-config.yaml` has only local hooks, and each one runs `uv run --frozen <tool>`.
   `uv.lock` is therefore the single source of tool versions for the hooks, CI and direct `uv run` calls.
   Don't switch hooks to hosted repos with their own `rev`s: that would bring back a second set of
