@@ -144,6 +144,12 @@ python, then the action via `uses: ./`, on ubuntu-26.04, ubuntu-26.04-arm, macos
   them yet. Delete it once actionlint does.
 - **Dependabot** (`.github/dependabot.yml`) opens monthly grouped PRs for `uv.lock` and for the actions used
   in the workflows and `action.yml`.
+- **`main` is protected by a ruleset (named `main`):** changes go through a PR, merges are squash only, and
+  force-pushes and deletion are blocked. Merging requires the checks `Lint`, `Test (ubuntu-26.04)`,
+  `Test (ubuntu-26.04-arm)`, `Test (macos-latest)` and `Test (windows-latest)`. These are matched by job
+  name, so **if you rename a job or change the test matrix, update the ruleset's required checks in the
+  same change.** Otherwise every PR waits for a check that never runs. Tags aren't covered, so moving `v1`
+  still works.
 - **Action version policy:** reference actions by their latest **major** tag (`actions/checkout@v7`).
   `astral-sh/setup-uv` publishes immutable releases with no moving major tag, so pin it to the latest
   exact version (`@v10.2.0`).
