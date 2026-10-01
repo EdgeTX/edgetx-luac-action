@@ -2,7 +2,7 @@
 name = "edgetx-luac-action"
 version = "0.0.0"
 description = "GitHub Action that precompiles Lua scripts to EdgeTX bytecode"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [dependency-groups]
 dev = [
