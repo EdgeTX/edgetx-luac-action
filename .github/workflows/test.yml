@@ -26,6 +26,8 @@ jobs:
 
       # the same hooks contributors run, with versions from uv.lock
       - name: Run pre-commit hooks
+        env:
+          SKIP: pytest # the test matrix runs it on every platform
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
 
   test:

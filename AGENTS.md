@@ -103,8 +103,9 @@ uv run ruff format                   # format Python
 ```
 
 The hooks check Python with ruff, every file against `.editorconfig`, the workflows with actionlint, that
-`uv.lock` matches `pyproject.toml`, and (at the commit-msg stage) that the message follows Conventional
-Commits. A hook that modifies files (`ruff check --fix`, `ruff format`) reports "Failed": re-stage the
+`uv.lock` matches `pyproject.toml`, run the unit tests whenever a file in `scripts/` or `test/` changes,
+and (at the commit-msg stage) check that the message follows Conventional Commits. CI's lint job skips the
+pytest hook (`SKIP: pytest`), because the test matrix runs the tests on every platform. A hook that modifies files (`ruff check --fix`, `ruff format`) reports "Failed": re-stage the
 changes and commit again.
 
 The unit tests fake `subprocess.run`, so they need neither the compiler nor the network. When you change a

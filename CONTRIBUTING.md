@@ -35,6 +35,7 @@ The pre-commit hooks check:
 - every file, against `.editorconfig`
 - the workflows, with actionlint
 - `uv.lock`, that it matches `pyproject.toml`
+- the unit tests, whenever a script or test changes
 - commit messages, that they follow Conventional Commits
 
 CI runs the same hooks, so a PR passes the lint job if they pass locally. To run them on everything:
