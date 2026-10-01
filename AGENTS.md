@@ -118,7 +118,7 @@ environment (see its docstring).
 | `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test** the action via `uses: ./` on ubuntu-latest, ubuntu-24.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
 | `release.yml` | `v[0-9]+.[0-9]+.[0-9]+*` tags | Builds static Linux x64/arm64, universal macOS and static-CRT Windows binaries, smoke-tests them, packages them with both licences, and creates a **draft** release |
 
-- **Dependabot** (`.github/dependabot.yml`) opens weekly grouped PRs for `uv.lock` and for the actions used
+- **Dependabot** (`.github/dependabot.yml`) opens monthly grouped PRs for `uv.lock` and for the actions used
   in the workflows and `action.yml`.
 - **Action version policy:** reference actions by their latest **major** tag (`actions/checkout@v7`).
   `astral-sh/setup-uv` publishes immutable releases with no moving major tag, so pin it to the latest

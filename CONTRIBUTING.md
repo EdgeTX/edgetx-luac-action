@@ -47,7 +47,7 @@ Each hook uses the tool version from `uv.lock`, so `uv run ruff format` and the 
 For your editor to agree as well, point its ruff integration at `.venv`. In VS Code, select `.venv` as
 the interpreter and set `"ruff.importStrategy": "fromEnvironment"`.
 
-Dependabot proposes updates to the tools (in `uv.lock`) and to the actions weekly.
+Dependabot proposes updates to the tools (in `uv.lock`) and to the actions monthly.
 
 ## Testing locally
 
