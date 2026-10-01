@@ -2,7 +2,7 @@
 
 ## Setup
 
-- **Python 3.9 or later**, to run the scripts.
+- **Python 3.12 or later**, to run the scripts.
 - **[uv](https://docs.astral.sh/uv/)**, for the dev tools (ruff, pre-commit, …), which are pinned in `uv.lock`.
 - To build the compiler locally: **CMake**, a **C compiler**, and a checkout of
   [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).

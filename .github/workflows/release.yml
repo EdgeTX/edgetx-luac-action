@@ -14,10 +14,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-26.04
             target: linux-x64
             cmake: -DCMAKE_EXE_LINKER_FLAGS=-static
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-26.04-arm
             target: linux-arm64
             cmake: -DCMAKE_EXE_LINKER_FLAGS=-static
           - os: macos-latest
@@ -70,7 +70,12 @@ jobs:
           python scripts/check_header.py main.luac
           "$luac" -l -p main.luac > /dev/null
           case "$RUNNER_OS" in
-            Linux) file "$luac" | grep -q 'statically linked' ;;
+            Linux)
+              # static, so the only thing it needs from a system is the
+              # minimum kernel that `file` reports ("for GNU/Linux x.y")
+              file "$luac"
+              file "$luac" | grep -q 'statically linked'
+              ;;
             macOS) lipo "$luac" -verify_arch arm64 x86_64 ;;
           esac
 
@@ -109,7 +114,7 @@ jobs:
   release:
     name: Draft release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:

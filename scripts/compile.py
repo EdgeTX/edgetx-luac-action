@@ -17,30 +17,29 @@ import sys
 from pathlib import Path, PurePath
 
 
-def escape(message):
+def escape(message: str) -> str:
     """Escape a workflow command message."""
     return message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
-def find_scripts(patterns, exclude):
+def find_scripts(patterns: str, exclude: str) -> list[str]:
     """Expand glob patterns to .lua files, in order and without duplicates."""
-    scripts = []
+    scripts: dict[str, None] = {}  # a dict keeps first-seen order
     for pattern in patterns.splitlines():
         pattern = pattern.strip()
         if not pattern:
             continue
         for match in sorted(glob.glob(pattern, recursive=True)):
-            path = PurePath(os.path.normpath(match)).as_posix()
-            if not path.endswith(".lua") or not os.path.isfile(path):
+            path = PurePath(os.path.normpath(match))
+            if path.suffix != ".lua" or not os.path.isfile(path):
                 continue
-            if exclude and path.startswith(exclude.rstrip("/") + "/"):
+            if exclude and path.is_relative_to(exclude):
                 continue
-            if path not in scripts:
-                scripts.append(path)
-    return scripts
+            scripts[path.as_posix()] = None
+    return list(scripts)
 
 
-def annotate(script, error):
+def annotate(script: str, error: str) -> None:
     """Report an edgetx-luac error as an annotation on the script."""
     # "<progname>: <chunk>:<line>: <message>"
     message = error.strip().split(": ", 1)[-1]
@@ -51,7 +50,7 @@ def annotate(script, error):
         print(f"::error file={script}::{escape(message)}")
 
 
-def main():
+def main() -> int:
     luac = os.environ["LUAC"]
     patterns = os.environ["FILES"]
     strip = os.environ.get("STRIP", "true") == "true"
@@ -64,15 +63,15 @@ def main():
         return 1
 
     failed = 0
-    outputs = []
+    outputs: list[str] = []
     for script in scripts:
         if check_only:
             out = None
             args = ["-p", script]
         else:
-            out = script[: -len(".lua")] + ".luac"
+            out = script.removesuffix(".lua") + ".luac"
             if output_dir:
-                out = f"{output_dir.rstrip('/')}/{out}"
+                out = PurePath(output_dir, out).as_posix()
                 Path(out).parent.mkdir(parents=True, exist_ok=True)
             args = (["-s"] if strip else []) + ["-o", out, script]
 

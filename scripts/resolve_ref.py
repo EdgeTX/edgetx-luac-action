@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 
-def resolve(repo, ref):
+def resolve(repo: str, ref: str) -> str | None:
     """Return the commit SHA for a branch, tag or SHA, or None if not found."""
     if re.fullmatch(r"[0-9a-f]{40}", ref):
         return ref
@@ -32,14 +32,14 @@ def resolve(repo, ref):
         print(f"::error::git ls-remote failed for {repo}: {result.stderr.strip()}")
         return None
 
-    refs = {}
+    refs: dict[str, str] = {}
     for line in result.stdout.splitlines():
         sha, name = line.split("\t")
         refs[name] = sha
     return next((refs[name] for name in wanted if name in refs), None)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(__doc__)
         return 2
