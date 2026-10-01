@@ -23,8 +23,12 @@ the rules that keep it working on every runner.
   runner provides, so nothing can be installed at runtime.
 - **Compiler build:** CMake plus the runner's C compiler (GCC, Apple clang, MSVC).
 - **Dev tooling:** [uv](https://docs.astral.sh/uv/) manages the dev dependency group in `pyproject.toml`
-  (`ruff`, `editorconfig-checker`), locked in `uv.lock`. These are for development and CI only and
-  are never used by the action itself.
+  (`ruff`, `editorconfig-checker`, `actionlint-py`, `commitizen`, `pre-commit`), locked in `uv.lock`.
+  These are for development and CI only and are never used by the action itself.
+- **Checks:** `.pre-commit-config.yaml` has only local hooks, and each one runs `uv run --frozen <tool>`.
+  `uv.lock` is therefore the single source of tool versions for the hooks, CI and direct `uv run` calls.
+  Don't switch hooks to hosted repos with their own `rev`s: that would bring back a second set of
+  versions.
 
 ## 3. Architecture
 
@@ -84,10 +88,15 @@ bytecode the radio can load. `check_header.py` holds the expected bytes.
 ## 6. Development Workflow
 
 ```sh
-uv run ruff check            # lint
-uv run ruff format           # format (CI runs --check)
-uv run ec                    # editorconfig check
+uv sync                              # once: install the dev tools into .venv
+uv run pre-commit run --all-files    # all checks, exactly as CI runs them
+uv run ruff format                   # format Python
 ```
+
+The hooks check Python with ruff, every file against `.editorconfig`, the workflows with actionlint, that
+`uv.lock` matches `pyproject.toml`, and (at the commit-msg stage) that the message follows Conventional
+Commits. A hook that modifies files (`ruff check --fix`, `ruff format`) reports "Failed": re-stage the
+changes and commit again.
 
 To exercise the scripts locally, you need a checkout of EdgeTX/edgetx:
 
@@ -104,9 +113,11 @@ environment (see its docstring).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `test.yml` | push to `main`, PRs, manual | **Lint** (ruff, editorconfig) and **Test** the action via `uses: ./` on ubuntu-latest, ubuntu-24.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
+| `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test** the action via `uses: ./` on ubuntu-latest, ubuntu-24.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
 | `release.yml` | `v[0-9]+.[0-9]+.[0-9]+*` tags | Builds static Linux x64/arm64, universal macOS and static-CRT Windows binaries, smoke-tests them, packages them with both licences, and creates a **draft** release |
 
+- **Dependabot** (`.github/dependabot.yml`) opens weekly grouped PRs for `uv.lock` and for the actions used
+  in the workflows and `action.yml`.
 - **Action version policy:** reference actions by their latest **major** tag (`actions/checkout@v7`).
   `astral-sh/setup-uv` publishes immutable releases with no moving major tag, so pin it to the latest
   exact version (`@v10.2.0`).
@@ -122,7 +133,7 @@ environment (see its docstring).
 ### Commits
 
 - Use Conventional Commits, as EdgeTX does: `type(scope): description`, e.g.
-  `fix(compile): keep paths POSIX on Windows`.
+  `fix(compile): keep paths POSIX on Windows`. The commit-msg hook (`cz check`) enforces this.
 - Commits authored by an AI agent must include a trailer identifying the model, e.g.
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Never amend or rewrite commits that have been pushed. Fix things with a follow-up commit. PRs are
@@ -130,9 +141,9 @@ environment (see its docstring).
 
 ### Pull Requests
 
-Make changes on a branch and open a PR against `main` of `EdgeTX/edgetx-luac-action`. Run the lint
-commands above first. CI runs the action on all four platforms, so check the Windows and macOS jobs as
-well as Linux.
+Make changes on a branch and open a PR against `main` of `EdgeTX/edgetx-luac-action`. Run
+`uv run pre-commit run --all-files` first. CI runs the action on all four platforms, so check the
+Windows and macOS jobs as well as Linux.
 
 ### What Lives Where
 

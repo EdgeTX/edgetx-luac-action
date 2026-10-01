@@ -3,9 +3,16 @@
 ## Setup
 
 - **Python 3.9 or later**, to run the scripts.
-- **[uv](https://docs.astral.sh/uv/)**, for the lint tools. `uv run …` installs them from `uv.lock` on first use.
+- **[uv](https://docs.astral.sh/uv/)**, for the dev tools (ruff, pre-commit, …), which are pinned in `uv.lock`.
 - To build the compiler locally: **CMake**, a **C compiler**, and a checkout of
   [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
+
+Then, once per clone:
+
+```sh
+uv sync                      # install the dev tools into .venv
+uv run pre-commit install    # run the checks on every commit
+```
 
 ## How it fits together
 
@@ -21,15 +28,26 @@
 The scripts use only the Python standard library, because the action runs them with the runner's own
 `python` and can't install anything. Please keep it that way.
 
-## Code style
+## Code style and checks
 
-CI checks these, so run them before opening a PR:
+The pre-commit hooks check:
+- Python, with ruff
+- every file, against `.editorconfig`
+- the workflows, with actionlint
+- `uv.lock`, that it matches `pyproject.toml`
+- commit messages, that they follow Conventional Commits
+
+CI runs the same hooks, so a PR passes the lint job if they pass locally. To run them on everything:
 
 ```sh
-uv run ruff check
-uv run ruff format --check   # or `uv run ruff format` to fix
-uv run ec                    # every file follows .editorconfig
+uv run pre-commit run --all-files
 ```
+
+Each hook uses the tool version from `uv.lock`, so `uv run ruff format` and the hooks always agree.
+For your editor to agree as well, point its ruff integration at `.venv`. In VS Code, select `.venv` as
+the interpreter and set `"ruff.importStrategy": "fromEnvironment"`.
+
+Dependabot proposes updates to the tools (in `uv.lock`) and to the actions weekly.
 
 ## Testing locally
 
