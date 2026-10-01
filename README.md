@@ -55,6 +55,19 @@ This writes a `.luac` next to each matched `.lua` file. Then package both files 
 
 Syntax errors appear as annotations on the offending line, and the action then fails.
 
+### Symlinked scripts on Windows runners
+
+On Windows, Git checks symlinks out as plain text files holding the link target, so a
+symlinked `.lua` file fails to compile. If your repository symlinks scripts and you build
+on Windows, enable symlinks before checking out:
+
+```yaml
+- run: git config --global core.symlinks true
+- uses: actions/checkout@v7
+```
+
+Linux and macOS runners need nothing extra.
+
 ### Lint on pull requests
 
 ```yaml
