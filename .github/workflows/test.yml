@@ -17,13 +17,12 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.2.0
 
-      - name: Check Python with ruff
-        run: |
-          uv run ruff check
-          uv run ruff format --check
+      - name: Install dev tools
+        run: uv sync --locked
 
-      - name: Check files against .editorconfig
-        run: uv run ec
+      # the same hooks contributors run, with versions from uv.lock
+      - name: Run pre-commit hooks
+        run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
 
   test:
     name: Test (${{ matrix.os }})
