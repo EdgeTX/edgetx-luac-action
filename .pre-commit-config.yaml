@@ -1,0 +1,47 @@
+# Every hook runs a tool from the uv dev group, so its version comes from
+# uv.lock: the same version CI, editors and `uv run <tool>` use.
+# Install with `uv run pre-commit install` (it sets up both hook types).
+default_install_hook_types: [pre-commit, commit-msg]
+# hooks run at the pre-commit stage unless they say otherwise (commitizen)
+default_stages: [pre-commit]
+
+repos:
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: uv.lock is up to date
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+
+      - id: editorconfig-checker
+        name: editorconfig-checker
+        entry: uv run --frozen ec
+        language: system
+        types: [text]
+        exclude: ^uv\.lock$
+
+      - id: actionlint
+        name: actionlint
+        entry: uv run --frozen actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      - id: commitizen
+        name: Conventional Commits message
+        entry: uv run --frozen cz check --allow-abort --commit-msg-file
+        language: system
+        stages: [commit-msg]
