@@ -67,6 +67,10 @@ bytecode the radio can load. `check_header.py` holds the expected bytes.
   endings, a final newline and no trailing whitespace. `.gitattributes` forces LF on checkout too.
 - **Rules learned the hard way. Don't break these:**
   - **Standard library only in `scripts/`.** Adding a dependency breaks every user of the action.
+  - **Python 3.12 is the minimum** (`requires-python`), because that's the default `python` on
+    `windows-latest` (Windows 2025). Ubuntu 26.04 and macOS ship 3.14. So the Windows test job checks the
+    scripts on the minimum version. Raise the minimum only when the oldest runner image the action
+    supports ships something newer.
   - **Write `GITHUB_OUTPUT` and `GITHUB_STEP_SUMMARY` with `open(..., "a", newline="\n")`.** Without it,
     Python on Windows writes CRLF and every output value gains a trailing `\r`.
   - **Inline bash in workflows must work on bash 3.2.** That's what macOS runners use for
@@ -115,9 +119,15 @@ environment (see its docstring).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test** the action via `uses: ./` on ubuntu-latest, ubuntu-24.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
+| `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test** the action via `uses: ./` on ubuntu-26.04, ubuntu-26.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
 | `release.yml` | `v[0-9]+.[0-9]+.[0-9]+*` tags | Builds static Linux x64/arm64, universal macOS and static-CRT Windows binaries, smoke-tests them, packages them with both licences, and creates a **draft** release |
 
+- **Runners:** every Ubuntu job (test and release) uses the same LTS image, `ubuntu-26.04` /
+  `ubuntu-26.04-arm`. macOS and Windows use `-latest`. The Linux release binaries are statically linked,
+  so the build image's glibc doesn't limit where they run: the only requirement is the minimum kernel,
+  which the release smoke test prints.
+  `.github/actionlint.yaml` declares the 26.04 labels only because actionlint v1.7.12 doesn't know
+  them yet. Delete it once actionlint does.
 - **Dependabot** (`.github/dependabot.yml`) opens monthly grouped PRs for `uv.lock` and for the actions used
   in the workflows and `action.yml`.
 - **Action version policy:** reference actions by their latest **major** tag (`actions/checkout@v7`).
