@@ -11,7 +11,7 @@ import sys
 EXPECTED = bytes.fromhex("1b4c7561530019930d0a1a0a0404040404")
 
 
-def main(paths):
+def main(paths: list[str]) -> int:
     status = 0
     for path in paths:
         try:
