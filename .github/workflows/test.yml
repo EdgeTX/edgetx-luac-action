@@ -16,6 +16,10 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.2.0
+        with:
+          # the ubuntu-26.04 test job would otherwise get the same cache key,
+          # and whichever saves second warns "Unable to reserve cache"
+          cache-suffix: lint
 
       - name: Install dev tools
         run: uv sync --locked
