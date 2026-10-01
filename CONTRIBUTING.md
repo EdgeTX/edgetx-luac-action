@@ -51,7 +51,14 @@ Dependabot proposes updates to the tools (in `uv.lock`) and to the actions month
 
 ## Testing locally
 
-Build the compiler from your EdgeTX checkout, then run the scripts against the fixtures:
+The unit tests in `test/` cover each script. They fake the calls to `cmake`, `git` and the compiler, so
+they need neither the compiler nor the network:
+
+```sh
+uv run pytest
+```
+
+To try the scripts for real, build the compiler from your EdgeTX checkout and run them against the fixtures:
 
 ```sh
 python scripts/build.py ../edgetx /tmp/luac
