@@ -35,6 +35,7 @@ The pre-commit hooks check:
 - every file, against `.editorconfig`
 - the workflows, with actionlint
 - `uv.lock`, that it matches `pyproject.toml`
+- the unit tests, whenever a script or test changes
 - commit messages, that they follow Conventional Commits
 
 CI runs the same hooks, so a PR passes the lint job if they pass locally. To run them on everything:
@@ -51,7 +52,14 @@ Dependabot proposes updates to the tools (in `uv.lock`) and to the actions month
 
 ## Testing locally
 
-Build the compiler from your EdgeTX checkout, then run the scripts against the fixtures:
+The unit tests in `test/` cover each script. They fake the calls to `cmake`, `git` and the compiler, so
+they need neither the compiler nor the network:
+
+```sh
+uv run pytest
+```
+
+To try the scripts for real, build the compiler from your EdgeTX checkout and run them against the fixtures:
 
 ```sh
 python scripts/build.py ../edgetx /tmp/luac

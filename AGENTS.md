@@ -41,9 +41,11 @@ scripts/
   build.py                 # cmake configure + build of edgetx-luac, copies the binary out
   compile.py               # glob matching, runs edgetx-luac per file, annotations, `files` output
   check_header.py          # asserts the .luac header matches the radio's 32-bit layout
-test/fixtures/
-  ok/                      # valid scripts, incl. a nested dir and a dir with a space
-  bad/broken.lua           # syntax error on line 3 (tests rely on the line number)
+test/
+  conftest.py              # loads scripts/*.py by path; points GITHUB_OUTPUT/STEP_SUMMARY at temp files
+  test_*.py                # pytest unit tests, one file per script (subprocess is faked, no network)
+  fixtures/ok/             # valid scripts, incl. a nested dir and a dir with a space
+  fixtures/bad/broken.lua  # syntax error on line 3 (tests rely on the line number)
 .github/workflows/
   test.yml                 # lint job + action tests on ubuntu x64/arm64, macOS, Windows
   release.yml              # on v* tags: build binaries, package, create a DRAFT release
@@ -96,15 +98,26 @@ bytecode the radio can load. `check_header.py` holds the expected bytes.
 ```sh
 uv sync                              # once: install the dev tools into .venv
 uv run pre-commit run --all-files    # all checks, exactly as CI runs them
+uv run pytest                        # unit tests
 uv run ruff format                   # format Python
 ```
 
 The hooks check Python with ruff, every file against `.editorconfig`, the workflows with actionlint, that
-`uv.lock` matches `pyproject.toml`, and (at the commit-msg stage) that the message follows Conventional
-Commits. A hook that modifies files (`ruff check --fix`, `ruff format`) reports "Failed": re-stage the
+`uv.lock` matches `pyproject.toml`, run the unit tests whenever a file in `scripts/` or `test/` changes,
+and (at the commit-msg stage) check that the message follows Conventional Commits. CI's lint job skips the
+pytest hook (`SKIP: pytest`), because the test matrix runs the tests on every platform. A hook that modifies files (`ruff check --fix`, `ruff format`) reports "Failed": re-stage the
 changes and commit again.
 
-To exercise the scripts locally, you need a checkout of EdgeTX/edgetx:
+The unit tests fake `subprocess.run`, so they need neither the compiler nor the network. When you change a
+script, add or update its tests, especially for platform-specific behaviour (path separators, newlines),
+which CI checks on all four runners. Never let a test write to the real `GITHUB_OUTPUT` or
+`GITHUB_STEP_SUMMARY`: the autouse fixture in `conftest.py` redirects them.
+
+Test failure paths (syntax errors, unknown refs) in the unit tests, not with workflow steps that make the
+action fail. A deliberately failing `uses: ./` step leaves red failure annotations on a green run, which
+hides real failures. If a workflow step must run a failing case, capture its output instead of printing it.
+
+To exercise the scripts for real, you need a checkout of EdgeTX/edgetx:
 
 ```sh
 python scripts/build.py ../edgetx /tmp/luac
@@ -119,7 +132,8 @@ environment (see its docstring).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test** the action via `uses: ./` on ubuntu-26.04, ubuntu-26.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, syntax-error annotation, unknown ref |
+| `test.yml` | push to `main`, PRs, manual | **Lint** (`pre-commit run --all-files`) and **Test**: pytest unit tests with the runner's own
+python, then the action via `uses: ./`, on ubuntu-26.04, ubuntu-26.04-arm, macos-latest and windows-latest: fixtures, output dir, glob rules, and the real compiler's error format |
 | `release.yml` | `v[0-9]+.[0-9]+.[0-9]+*` tags | Builds static Linux x64/arm64, universal macOS and static-CRT Windows binaries, smoke-tests them, packages them with both licences, and creates a **draft** release |
 
 - **Runners:** every Ubuntu job (test and release) uses the same LTS image, `ubuntu-26.04` /

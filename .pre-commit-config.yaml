@@ -40,6 +40,15 @@ repos:
         language: system
         files: ^\.github/workflows/.*\.ya?ml$
 
+      # whole suite (~0.1 s) whenever a script or test changes; CI's lint job
+      # skips it because the test matrix runs it on every platform
+      - id: pytest
+        name: pytest
+        entry: uv run --frozen pytest -q
+        language: system
+        files: ^(scripts|test)/.*\.py$
+        pass_filenames: false
+
       - id: commitizen
         name: Conventional Commits message
         entry: uv run --frozen cz check --allow-abort --commit-msg-file

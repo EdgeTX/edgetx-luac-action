@@ -16,12 +16,18 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.2.0
+        with:
+          # the ubuntu-26.04 test job would otherwise get the same cache key,
+          # and whichever saves second warns "Unable to reserve cache"
+          cache-suffix: lint
 
       - name: Install dev tools
         run: uv sync --locked
 
       # the same hooks contributors run, with versions from uv.lock
       - name: Run pre-commit hooks
+        env:
+          SKIP: pytest # the test matrix runs it on every platform
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
 
   test:
@@ -37,6 +43,16 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      # use the runner's own python, as the action does, so the Windows job
+      # tests the 3.12 minimum
+      - name: Unit tests
+        run: |
+          uv run --frozen --python-preference only-system python --version
+          uv run --frozen --python-preference only-system pytest
 
       - name: Compile fixtures
         id: ok
@@ -88,41 +104,20 @@ jobs:
           [ "$FILES" = dist/test/fixtures/ok/main.luac ]
           python scripts/check_header.py dist/test/fixtures/ok/main.luac
 
-      - name: Check a syntax error fails the action
-        id: bad
-        continue-on-error: true
-        uses: ./
-        with:
-          files: test/fixtures/bad/*.lua
-          check-only: true
-
-      - name: Check the syntax error was reported
+      # The unit tests cover failure handling with a faked compiler. This checks
+      # the real compiler's error format still parses. The output is captured
+      # rather than printed, so the expected error doesn't show up as a failure
+      # annotation on the run.
+      - name: Check the real compiler's syntax errors are annotated
         env:
-          OUTCOME: ${{ steps.bad.outcome }}
           LUAC: ${{ steps.ok.outputs.luac }}
         run: |
-          if [ "$OUTCOME" != failure ]; then
-            echo "::error::Expected the action to fail on a syntax error, got '$OUTCOME'"
+          if out=$(LUAC="$LUAC" FILES='test/fixtures/bad/*.lua' CHECK_ONLY=true python scripts/compile.py 2>&1); then
+            echo "::error::Expected compile.py to fail on bad/broken.lua"
             exit 1
           fi
-          # capture rather than print, so the expected error isn't annotated again
-          out=$(LUAC="$LUAC" FILES='test/fixtures/bad/*.lua' CHECK_ONLY=true python scripts/compile.py 2>&1) && exit 1
-          grep -qF '::error file=test/fixtures/bad/broken.lua,line=3::' <<< "$out" || {
-            echo "::error::Missing annotation for bad/broken.lua"
+          grep -qF "::error file=test/fixtures/bad/broken.lua,line=3::unexpected symbol near 'end'" <<< "$out" || {
+            echo "::error::Missing or changed annotation for bad/broken.lua"
             exit 1
           }
           [ ! -e test/fixtures/bad/broken.luac ]
-
-      - name: Check an unknown EdgeTX ref fails the action
-        id: badref
-        continue-on-error: true
-        uses: ./
-        with:
-          files: test/fixtures/ok/main.lua
-          check-only: true
-          edgetx-ref: no-such-ref
-
-      - name: Check the unknown ref was rejected
-        env:
-          OUTCOME: ${{ steps.badref.outcome }}
-        run: '[ "$OUTCOME" = failure ]'

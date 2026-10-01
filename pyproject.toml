@@ -10,6 +10,7 @@ dev = [
     "commitizen",
     "editorconfig-checker",
     "pre-commit",
+    "pytest",
     "ruff",
     "shellcheck-py",
 ]
@@ -22,3 +23,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = ["--import-mode=importlib"]
