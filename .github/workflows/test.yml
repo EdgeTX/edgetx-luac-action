@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           # the ubuntu-26.04 test job would otherwise get the same cache key,
           # and whichever saves second warns "Unable to reserve cache"
@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.3
 
       # use the runner's own python, as the action does, so the Windows job
       # tests the 3.12 minimum
